@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portafolio Inmobiliario</title>
-    <!-- Chart.js es liviano y necesario para la gráfica -->
+    <!-- Chart.js para la gráfica -->
     <script src="https://jsdelivr.net"></script>
     
-    <!-- CSS Nativo Inyectado: Carga inmediata sin librerías pesadas -->
+    <!-- CSS Nativo Optimizado -->
     <style>
         :root {
             --bg-main: #f8fafc;
@@ -20,7 +20,7 @@
             --border: #e2e8f0;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; bg-color: var(--bg-main); color: var(--text-main); line-height: 1.5; padding: 20px; background: var(--bg-main); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-main); color: var(--text-main); line-height: 1.5; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
         
         header { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 24px; }
@@ -37,13 +37,13 @@
         
         .card { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); }
         .card-title { font-size: 16px; font-weight: 700; margin-bottom: 15px; color: var(--text-main); }
-        .chart-container { relative; height: 260px; width: 100%; }
+        .chart-container { position: relative; height: 260px; width: 100%; }
         
         .filter-group { display: flex; flex-direction: column; gap: 15px; height: 100%; justify-content: space-between; }
         select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: #f8fafc; font-size: 14px; outline: none; }
         select:focus { border-color: var(--primary); }
         .counter-box { background: var(--primary-light); padding: 15px; border-radius: 12px; border: 1px solid #dbeafe; }
-        .counter-label { font-size: 11px; uppercase; font-weight: 700; color: var(--primary); tracking-wider; }
+        .counter-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--primary); tracking-wider; }
         .counter-val { font-size: 32px; font-weight: 900; color: var(--primary); }
 
         .table-container { background: var(--surface); border-radius: 16px; border: 1px solid var(--border); overflow-x: auto; }
@@ -52,7 +52,7 @@
         td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         tr:hover { background: #f8fafc; }
         
-        .prop-img { w-width: 70px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+        .prop-img { width: 70px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
         .prop-title { font-weight: 700; color: var(--text-main); }
         .prop-type { font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: var(--text-muted); display: inline-block; margin-top: 4px; }
         .prop-price { font-weight: 700; color: var(--accent); font-size: 15px; }
@@ -121,7 +121,7 @@
     </div>
 
     <script>
-        // Tu enlace directo oficial CSV de Google Sheets
+        // URL Limpia y optimizada para evitar restricciones de origen de Google
         const SHEET_CSV_URL = 'https://google.com';
 
         let todasLasPropiedades = [];
@@ -174,9 +174,8 @@
         async function inicializarApp() {
             const indicador = document.getElementById('estadoConexion');
             try {
-                // Petición directa y veloz saltándose cachés locales intermedias
                 const respuesta = await fetch(SHEET_CSV_URL, { cache: "no-store" });
-                if (!respuesta.ok) throw new Error();
+                if (!respuesta.ok) throw new Error("Fallo de red");
                 
                 const textoCSV = await respuesta.text();
                 todasLasPropiedades = parsearCSV(textoCSV);
@@ -187,6 +186,7 @@
                 configurarFiltros(todasLasPropiedades);
                 actualizarPantalla(todasLasPropiedades);
             } catch (error) {
+                console.error("Error capturado:", error);
                 indicador.className = "error";
                 indicador.textContent = "🔴 Error al conectar";
             }
