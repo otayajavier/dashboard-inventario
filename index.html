@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portafolio Inmobiliario</title>
-    <!-- Tailwind CSS Estable y ultra rápido (Carga instantánea) -->
-    <script src="https://jsdelivr.net"></script>
+    <!-- SOLUCIÓN: Tailwind CSS v3 Estable mediante CDN Oficial (Carga en milisegundos) -->
+    <script src="https://tailwindcss.com"></script>
     <!-- Chart.js para las gráficas -->
     <script src="https://jsdelivr.net"></script>
 </head>
@@ -76,13 +76,13 @@
     </div>
 
     <script>
-        // Enlace oficial de tu Google Sheets en formato CSV
-        const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtvXTHLmFkyoPIBFl_fRN_n-lPPxsy7pIRB9_aDdWixr-RzCXXlGoyTOE8kyE-B6OMeR3Da6kalyIg/pub?output=csv';
+        // Dirección oficial de tu CSV
+        const SHEET_CSV_URL = 'https://google.com';
 
         let todasLasPropiedades = [];
         let miGrafico = null;
 
-        // Parseador de CSV inteligente y robusto
+        // Parseador robusto para mapear de forma segura las columnas
         function parsearCSV(texto) {
             const lineas = texto.split(/\r?\n/);
             const resultado = [];
@@ -110,8 +110,8 @@
 
                 const limpiar = (val) => val ? val.replace(/^"|"$/g, '').trim() : '';
 
-                // Ajuste de mapeo según el orden estándar de tus columnas
-                if (columnas[3] || columnas[2]) { 
+                // Mapeo seguro según las columnas del documento
+                if (columnas[2]) { 
                     resultado.push({
                         origen: limpiar(columnas[0]),
                         tipo: limpiar(columnas[1]),
@@ -132,9 +132,9 @@
         async function inicializarApp() {
             const indicadorEstado = document.getElementById('estadoConexion');
             try {
-                // cache: "no-store" obliga al navegador a traer siempre los datos frescos de Google Sheets
+                // cache: "no-store" evita retrasos por caché del navegador local
                 const respuesta = await fetch(SHEET_CSV_URL, { cache: "no-store" });
-                if (!respuesta.ok) throw new Error("Error de red al conectar con Google");
+                if (!respuesta.ok) throw new Error("Error de respuesta");
                 
                 const textoCSV = await respuesta.text();
                 todasLasPropiedades = parsearCSV(textoCSV);
@@ -147,7 +147,7 @@
             } catch (error) {
                 console.error(error);
                 indicadorEstado.className = "bg-red-50 text-red-800 text-xs font-semibold px-3 py-1.5 rounded-full border border-red-200 animate-none";
-                indicadorEstado.textContent = "🔴 Error de conexión con la base de datos";
+                indicadorEstado.textContent = "🔴 Error al leer datos de la hoja";
             }
         }
 
@@ -191,3 +191,4 @@
 
                 fila.innerHTML = `
                     <td class="px-6 py-4"><img src="${imagenMostrada}" class="w-16 h-12 object-cover rounded-xl shadow-sm border border-slate-100"></td>
+                    <td class="px-6 py-4"><span class="font-bold text-slate-800">${p.nombre}</span><br><span class="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-medium inline-block mt-1">${p.tipo}</span></td>
