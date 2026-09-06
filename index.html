@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portafolio Inmobiliario - Javier Otaya</title>
+    <!-- Tailwind CSS para diseño rápido y limpio -->
+    <script src="https://jsdelivr.net"></script>
+    <!-- Chart.js para las gráficas -->
+    <script src="https://jsdelivr.net"></script>
+</head>
+<body class="bg-gray-100 font-sans antialiased text-gray-900">
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Encabezado -->
+        <header class="mb-8 text-center md:text-left">
+            <h1 class="text-3xl font-extrabold text-blue-800">📊 Control de Inventario Inmobiliario</h1>
+            <p class="text-gray-600 mt-2">Visualización de propiedades y análisis de precios en tiempo real.</p>
+        </header>
+
+        <!-- Sección de Gráficos e Indicadores -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-md lg:col-span-2">
+                <h2 class="text-lg font-bold mb-4 text-gray-700">Comparativa de Precios por Proyecto (Venta)</h2>
+                <div class="relative h-64 md:h-80">
+                    <canvas id="chartPrecios"></canvas>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-bold mb-4 text-gray-700">Filtros de Búsqueda</h2>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Filtrar por Barrio/Zona:</label>
+                    <select id="selectBarrio" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500" onchange="filtrarPropiedades()">
+                        <option value="todos">✨ Mostrar Todos</option>
+                    </select>
+                </div>
+                <div class="mt-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <p class="text-sm text-blue-800 font-medium">Total Propiedades en Catálogo:</p>
+                    <p id="totalInmuebles" class="text-3xl font-black text-blue-900 mt-1">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Datos -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 class="text-lg font-bold text-gray-700">Listado General de Inmuebles</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-700 uppercase text-xs font-semibold">
+                            <th class="px-6 py-3">Imagen</th>
+                            <th class="px-6 py-3">Proyecto / Tipo</th>
+                            <th class="px-6 py-3">Barrio</th>
+                            <th class="px-6 py-3">Precio (COP)</th>
+                            <th class="px-6 py-3">Características</th>
+                            <th class="px-6 py-3">Ficha</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaInmuebles" class="divide-y divide-gray-200 text-sm">
+                        <!-- Los datos se cargan dinámicamente aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // REMPLAZA ESTA URL POR TU ENLACE CSV DE GOOGLE SHEETS
+        const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtvXTHLmFkyoPIBFl_fRN_n-lPPxsy7pIRB9_aDdWixr-RzCXXlGoyTOE8kyE-B6OMeR3Da6kalyIg/pub?output=csv';
+
+        let todasLasPropiedades = [];
+        let miGrafico = null;
+
+        // Función para convertir texto CSV en una Matriz/Array utilizable
+        function parsearCSV(texto) {
+            const lineas = texto.split('\n');
+            const resultado = [];
+            // Empezamos en 1 para saltarnos la fila de títulos de columna
+            for (let i = 1; i < lineas.length; i++) {
+                if (!lineas[i].trim()) continue;
+                
+                // Expresión regular para separar por comas respetando los textos entre comillas
+                const columnas = lineas[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lineas[i].split(',');
+                
+                // Limpiamos comillas y espacios de cada celda extraída
+                const limpiar = (celda) => celda ? celda.replace(/^"|"$/g, '').trim() : '';
+
+                if(limpiar(columnas[2])) { // Verificar que tenga nombre de proyecto
+                    resultado.push({
+                        origen: limpiar(columnas[0]),
+                        tipo: limpiar(columnas[1]),
+                        nombre: limpiar(columnas[2]),
+                        barrio: limpiar(columnas[3]),
+                        precioRaw: limpiar(columnas[4]),
+                        area: limpiar(columnas[6]),
+                        habitaciones: limpiar(columnas[7]),
+                        banos: limpiar(columnas[8]),
+                        ficha: limpiar(columnas[17]),
+                        imagen: limpiar(columnas[18])
+                    });
+                }
+            }
+            return resultado;
+        }
+
+        // Cargar los datos desde Google Sheets al iniciar la app
+        async function inicializarApp() {
+            try {
+                const respuesta = await fetch(SHEET_CSV_URL);
+                const textoCSV = await respuesta.text();
+                todasLasPropiedades = parsearCSV(textoCSV);
+
+                configurarFiltros(todasLasPropiedades);
+                actualizarPantalla(todasLasPropiedades);
+            } catch (error) {
+                console.error("Error cargando los datos de Google Sheets:", error);
+                alert("No se pudieron cargar los datos. Verifica tu enlace de Google Sheets.");
+            }
+        }
+
+        // Llenar el selector de barrios dinámicamente
+        function configurarFiltros(propiedades) {
+            const select = document.getElementById('selectBarrio');
+            const barrios Unicos = [...new Set(propiedades.map(p => p.barrio).filter(b => b))];
+            
+            barriosUnicos.sort().forEach(barrio => {
+                const opcion = document.createElement('option');
+                opcion.value = barrio;
+                opcion.textContent = barrio;
+                select.appendChild(opcion);
+            });
+        }
+
+        // Filtrar datos según el barrio seleccionado
+        function filtrarPropiedades() {
+            const barrioSeleccionado = document.getElementById('selectBarrio').value;
+            const propiedadesFiltradas = barrioSeleccionado === 'todos' 
+                ? todasLasPropiedades 
+                : todasLasPropiedades.filter(p => p.barrio === barrioSeleccionado);
+            
+            actualizarPantalla(propiedadesFiltradas);
+        }
+
+        // Renderizar tabla y gráfico en la interfaz
+        function actualizarPantalla(propiedades) {
+            document.getElementById('totalInmuebles').textContent = propiedades.length;
+            
+            // 1. Renderizar Tabla
+            const tabla = document.getElementById('tablaInmuebles');
+            tabla.innerHTML = '';
+
+            propiedades.forEach(p => {
+                const fila = document.createElement('tr');
+                fila.className = "hover:bg-gray-50 transition-colors";
+                
+                // Formatear el precio de texto a limpio para la vista
+                const precioMostrado = p.precioRaw.includes('$') ? p.precioRaw : `$${p.precioRaw}`;
+                const imagenMostrada = p.imagen && p.imagen.startsWith('http') ? p.imagen : 'https://placehold.co';
+
+                fila.innerHTML = `
+                    <td class="px-6 py-4"><img src="${imagenMostrada}" class="w-16 h-12 object-cover rounded-lg shadow-sm"></td>
+                    <td class="px-6 py-4 font-bold text-gray-800">${p.nombre}<br><span class="text-xs text-gray-500 font-normal">${p.tipo}</span></td>
+                    <td class="px-6 py-4 text-gray-600">${p.barrio}</td>
+                    <td class="px-6 py-4 font-semibold text-green-700">${precioMostrado}</td>
+                    <td class="px-6 py-4 text-xs text-gray-500">📐 ${p.area}m²<br>🛏️ ${p.habitaciones} Hab | 🚽 ${p.banos} Baños</td>
+                    <td class="px-6 py-4"><a href="${p.ficha}" target="_blank" class="text-blue-600 hover:text-blue-800 font-medium underline text-xs">Ver Ficha</a></td>
+                `;
+                tabla.appendChild(fila);
+            });
+
+            // 2. Renderizar Gráfico (Chart.js)
+            const nombres = propiedades.map(p => p.nombre);
+            const precios = propiedades.map(p => {
+                // Convertimos "$215.000.000" a número puro 215000000 para graficar
+                return Number(p.precioRaw.replace(/[^0-9]/g, '')) || 0;
+            });
+
+            const ctx = document.getElementById('chartPrecios').getContext('2d');
+            
+            // Si el gráfico ya existía, lo destruimos para poder redibujarlo con los nuevos datos filtrados
+            if (miGrafico) miGrafico.destroy();
+
+            miGrafico = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: nombres,
+                    datasets: [{
+                        label: 'Precio de Venta (COP)',
+                        data: precios,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(29, 78, 216, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
